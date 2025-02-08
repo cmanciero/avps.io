@@ -1,0 +1,10 @@
+{
+    "name": "Metaverse Punk #167",
+    "description": "Metaverse Punks is a 333 collection of custom 1:1 3D Characters punking around the Ethereum blockchain as ERC-721 tokens and hosted on IPFS",
+    "attributes": [{
+        "trait_type": "Body",
+        "value": "Male"
+    }],
+    "image": "ipfs://QmVAfx2HD2iowT1jaJrBGoNxA7xjn4TybJZaAqnYAbb3xg/167.png",
+    "tokenId": 167
+}
