@@ -21,44 +21,18 @@ function Header({}: Props) {
 	const onBtnClick = () => {};
 
 	const showPunksMenu = () => {
-		clearTimeout(closeTimer);
-
 		if (showMenu) {
 			setShowMenu(false);
-			window.removeEventListener('click', closeMenu);
 		} else {
 			setShowMenu(true);
-			closeTimer = setTimeout(() => {
-				window.addEventListener('click', closeMenu);
-			}, 200);
-		}
-	};
-
-	const closeMenu = () => {
-		if (showMenu) {
-			setShowMenu(false);
-			window.removeEventListener('click', closeMenu);
-		}
-	};
-
-	const closeGameMenu = () => {
-		if (showAppList) {
-			setShowAppList(false);
-			window.removeEventListener('click', closeGameMenu);
 		}
 	};
 
 	const showGamesMenu = () => {
-		clearTimeout(closeGameTimer);
-
 		if (showAppList) {
 			setShowAppList(false);
-			window.removeEventListener('click', closeGameMenu);
 		} else {
 			setShowAppList(true);
-			closeGameTimer = setTimeout(() => {
-				window.addEventListener('click', closeGameMenu);
-			}, 200);
 		}
 	};
 
@@ -83,6 +57,46 @@ function Header({}: Props) {
 			window.removeEventListener('scroll', () => handleScroll());
 		};
 	}, []);
+
+	useEffect(() => {
+		clearTimeout(closeTimer);
+		const closeMenu = () => {
+			if (showMenu) {
+				setShowMenu(false);
+				window.removeEventListener('click', closeMenu);
+			}
+		};
+
+		if (showMenu) {
+			closeTimer = setTimeout(() => {
+				window.addEventListener('click', closeMenu);
+			}, 200);
+		}
+
+		return () => {
+			window.removeEventListener('click', closeMenu);
+		};
+	}, [showMenu]);
+
+	useEffect(() => {
+		clearTimeout(closeGameTimer);
+		const closeGameMenu = () => {
+			if (showAppList) {
+				setShowAppList(false);
+				window.removeEventListener('click', closeGameMenu);
+			}
+		};
+
+		if (showAppList) {
+			closeGameTimer = setTimeout(() => {
+				window.addEventListener('click', closeGameMenu);
+			}, 200);
+		}
+
+		return () => {
+			window.removeEventListener('click', closeGameMenu);
+		};
+	}, [showAppList]);
 
 	return (
 		<header
@@ -230,6 +244,7 @@ function Header({}: Props) {
 											href='https://opensea.io/collection/averagepunks-'
 											rel='noopener noreferrer'
 											target='_blank'
+											className='cursor-pointer text-purple-700 hover:text-white font-semibold'
 										>
 											Average Punks
 										</Link>
@@ -239,6 +254,7 @@ function Header({}: Props) {
 											href='https://opensea.io/collection/metaverse-punks-'
 											rel='noopener noreferrer'
 											target='_blank'
+											className='cursor-pointer text-purple-700 hover:text-white font-semibold'
 										>
 											Metaverse Punks
 										</Link>
@@ -265,7 +281,7 @@ function Header({}: Props) {
 									<li className='uppercase px-3 py-2 cursor-pointer text-purple-700 hover:text-white hover:bg-purple-700 bg-none'>
 										<Link
 											href='/pza-dash'
-											className='cursor-pointer text-purple-700 hover:text-white font-semibold mx-4'
+											className='cursor-pointer text-purple-700 hover:text-white font-semibold'
 										>
 											PZA Dash
 										</Link>
