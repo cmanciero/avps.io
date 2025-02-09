@@ -1,24 +1,78 @@
 'use client';
 
+import { BrowserProvider, ethers } from 'ethers';
 import Image from 'next/image';
 import Link from 'next/link';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import Web3Modal from 'web3modal';
 
 import Logo from '../../assets/images/logo.png';
+
+const web3Modal = new Web3Modal({
+	// network: 'mainnet', // Optional: if you have a default chain
+	cacheProvider: true, // Optional: store user's provider choice
+	providerOptions: {}, // Required: provider options
+});
 
 type Props = {};
 
 function Header({}: Props) {
+	const allowedAdmins = [
+		'0xd4850927a6e3f30E2e3C3b14D98131Cf8e2D9634',
+		'0xd83682D4818D6D044Ce613a19f605c2af7ab6729',
+		'0xab7DDe540d93219906CC431cCA83723611312823',
+		'0xD97851CEC4c57Cb7dBB114266F579500801adcea',
+		'0xBc8f763673483e0c0F0928ffd631368317157354',
+		'0xbe1f98c407e7030904fdac86219f5c9fb7029ecf',
+		'0xDB1Ac1d3CaCF1bB80e3597bb0EE3CAF52D266dFa',
+		'0xa86c148795b0758E6E245f30217bbD5Cdf8D324E',
+	];
 	const [openNav, setOpenNav] = useState(false);
 	const [stickyHeader, setStickyHeader] = useState(false);
-	const [allowed, setAllowed] = useState();
+	const [allowed, setAllowed] = useState(false);
 	const [showMenu, setShowMenu] = useState(false);
 	const [btnText, setBtnText] = useState('Connect');
+	const [webAddress, setWebAddress] = useState<string>();
 	const [showAppList, setShowAppList] = useState(false);
+	const [provider, setProvider] = useState<BrowserProvider>();
+
 	let closeTimer: NodeJS.Timeout;
 	let closeGameTimer: NodeJS.Timeout;
 
-	const onBtnClick = () => {};
+	const connectWallet = useCallback(async () => {
+		try {
+			const externalProvider = await web3Modal.connect();
+			const ethersProvider = new ethers.BrowserProvider(externalProvider);
+			const signer = await ethersProvider.getSigner();
+			const walletAddress = await signer.getAddress();
+
+			setProvider(ethersProvider);
+			setWebAddress(walletAddress);
+		} catch (error) {
+			console.error('Failed to connect wallet:', error);
+		}
+	}, []);
+
+	const disconnectWallet = useCallback(async () => {
+		await web3Modal.clearCachedProvider();
+		setProvider(undefined);
+		setWebAddress(undefined);
+	}, []);
+
+	useEffect(() => {
+		if (web3Modal.cachedProvider) {
+			connectWallet();
+		}
+	}, [connectWallet]);
+
+	useEffect(() => {
+		if (webAddress) {
+			const address = webAddress.slice(0, 5) + '...' + webAddress.substring(webAddress.length - 4, webAddress.length);
+			setBtnText(address);
+		} else {
+			setBtnText('Connect');
+		}
+	}, [webAddress]);
 
 	const showPunksMenu = () => {
 		if (showMenu) {
@@ -193,13 +247,24 @@ function Header({}: Props) {
 					>
 						PZA Dash
 					</Link>
-					<Link
-						href='#'
-						onClick={() => onBtnClick()}
-						className='px-3 pr-2 rounded cursor-pointer w-max text-white font-semibold my-4 mx-4 connect uppercase'
-					>
-						{btnText}
-					</Link>
+					{!webAddress && (
+						<Link
+							href='#'
+							onClick={connectWallet}
+							className='px-3 pr-2 rounded cursor-pointer w-max text-white font-semibold my-4 mx-4 connect uppercase'
+						>
+							{btnText}
+						</Link>
+					)}
+					{webAddress && (
+						<Link
+							href='#'
+							onClick={disconnectWallet}
+							className='px-3 pr-2 rounded cursor-pointer w-max text-white font-semibold my-4 mx-4 connect uppercase'
+						>
+							{btnText}
+						</Link>
+					)}
 				</div>
 				<div className='hidden lg:flex flex-grow items-center'>
 					<div className='md:ml-auto md:mr-auto font-4 pt-1 md:pl-32 pl-1 flex flex-wrap items-center md:text-base text-1xl md:justify-center justify-items-start'>
@@ -298,13 +363,24 @@ function Header({}: Props) {
 						</Link>
 					</div>
 					<div className='justify-self-end flex flex-row-reverse items-center'>
-						<Link
-							href='#'
-							onClick={() => onBtnClick()}
-							className='px-3 py-1 rounded flex items-center justify-center cursor-pointer text-white connect font-semibold uppercase'
-						>
-							{btnText}
-						</Link>
+						{!webAddress && (
+							<Link
+								href='#'
+								onClick={connectWallet}
+								className='px-3 py-1 rounded flex items-center justify-center cursor-pointer text-white connect font-semibold uppercase'
+							>
+								{btnText}
+							</Link>
+						)}
+						{webAddress && (
+							<Link
+								href='#'
+								onClick={disconnectWallet}
+								className='px-3 py-1 rounded flex items-center justify-center cursor-pointer text-white connect font-semibold uppercase'
+							>
+								{btnText}
+							</Link>
+						)}
 						<Link
 							href='https://twitter.com/AveragePunksNFT'
 							rel='noopener noreferrer'

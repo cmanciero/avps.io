@@ -1,6 +1,5 @@
 import Web3 from "web3";
-import Web3Modal
-, { getInjectedProvider, getInjectedProviderName }
+import Web3Modal, { getInjectedProvider, getInjectedProviderName }
   from "web3modal";
 import {WalletLink} from "walletlink";
 let web3, web3Provider, web3Account, web3Chain, web3Modal;
