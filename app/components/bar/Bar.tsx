@@ -1,7 +1,7 @@
 'use client';
 
 import Image, { StaticImageData } from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Alpha from '../../assets/images/alpha_pfp.png';
 import AVP5_GIF from '../../assets/images/AVP5.gif';
@@ -84,6 +84,20 @@ function Bar({}: Props) {
 		setSelectedPartner(member);
 	};
 
+	useEffect(() => {
+		const onResize = () => {
+			setIsMobile(window.innerHeight <= 500 || window.innerWidth <= 1000);
+		};
+
+		window.addEventListener('resize', onResize);
+
+		onResize();
+
+		return () => {
+			window.removeEventListener('resize', onResize);
+		};
+	}, []);
+
 	return (
 		<section
 			className='bar'
@@ -99,31 +113,54 @@ function Bar({}: Props) {
 				alt='Bar'
 				className='bgImage'
 			/>
-			<div className='partners'>
-				{partners.map((partner) => (
-					<div
-						key={partner.id}
-						onClick={() => partnerClick(partner)}
-						onMouseOver={() => partnerClick(partner)}
-						onMouseOut={() => partnerClick(blankPartner)}
-					>
-						<div className={'partner ' + (selectedPartnerId === partner.id ? 'show' : '')}>
-							<div className='flex flex-col pfp gap-2'>
-								<label className='text-purple-700'>{partner.name}</label>
-								<Image
-									src={partner.profile}
-									alt='Member PFP'
-								/>
-								{partner.summary}
-								<div className='socials justify-evenly items-center flex flex-row justify-self-end'>
-									{partner.twitter && <Twitter link={partner.twitter} />}
-									{partner.linkedIn && <LinkedIn link={partner.linkedIn} />}
+			{isMobile && (
+				<div className='partners mobile'>
+					{partners.map((partner) => (
+						<div key={partner.id}>
+							<div className='partner show'>
+								<div className='flex flex-col pfp gap-2'>
+									<label className='text-purple-700'>{partner.name}</label>
+									<Image
+										src={partner.profile}
+										alt='Member PFP'
+									/>
+									<div className='socials justify-evenly items-center flex flex-row justify-self-end'>
+										{partner.twitter && <Twitter link={partner.twitter} />}
+										{partner.linkedIn && <LinkedIn link={partner.linkedIn} />}
+									</div>
 								</div>
 							</div>
 						</div>
-					</div>
-				))}
-			</div>
+					))}
+				</div>
+			)}
+			{!isMobile && (
+				<div className='partners'>
+					{partners.map((partner) => (
+						<div
+							key={partner.id}
+							onClick={() => partnerClick(partner)}
+							onMouseOver={() => partnerClick(partner)}
+							onMouseOut={() => partnerClick(blankPartner)}
+						>
+							<div className={'partner ' + (selectedPartnerId === partner.id ? 'show' : '')}>
+								<div className='flex flex-col pfp gap-2'>
+									<label className='text-purple-700'>{partner.name}</label>
+									<Image
+										src={partner.profile}
+										alt='Member PFP'
+									/>
+									{partner.summary}
+									<div className='socials justify-evenly items-center flex flex-row justify-self-end'>
+										{partner.twitter && <Twitter link={partner.twitter} />}
+										{partner.linkedIn && <LinkedIn link={partner.linkedIn} />}
+									</div>
+								</div>
+							</div>
+						</div>
+					))}
+				</div>
+			)}
 		</section>
 	);
 }
