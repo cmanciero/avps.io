@@ -6,6 +6,9 @@ import Link from 'next/link';
 import React, { useCallback, useEffect, useState } from 'react';
 import Web3Modal from 'web3modal';
 
+import { faCaretDown } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+
 import Logo from '../../assets/images/logo.png';
 
 const web3Modal = new Web3Modal({
@@ -17,16 +20,7 @@ const web3Modal = new Web3Modal({
 type Props = {};
 
 function Header({}: Props) {
-	const allowedAdmins = [
-		'0xd4850927a6e3f30E2e3C3b14D98131Cf8e2D9634',
-		'0xd83682D4818D6D044Ce613a19f605c2af7ab6729',
-		'0xab7DDe540d93219906CC431cCA83723611312823',
-		'0xD97851CEC4c57Cb7dBB114266F579500801adcea',
-		'0xBc8f763673483e0c0F0928ffd631368317157354',
-		'0xbe1f98c407e7030904fdac86219f5c9fb7029ecf',
-		'0xDB1Ac1d3CaCF1bB80e3597bb0EE3CAF52D266dFa',
-		'0xa86c148795b0758E6E245f30217bbD5Cdf8D324E',
-	];
+	const allowedAdmins = ['0xDB1Ac1d3CaCF1bB80e3597bb0EE3CAF52D266dFa'];
 	const [openNav, setOpenNav] = useState(false);
 	const [stickyHeader, setStickyHeader] = useState(false);
 	const [allowed, setAllowed] = useState(false);
@@ -48,6 +42,8 @@ function Header({}: Props) {
 
 			setProvider(ethersProvider);
 			setWebAddress(walletAddress);
+			const walletAllowed = allowedAdmins.includes(walletAddress);
+			setAllowed(walletAllowed);
 		} catch (error) {
 			console.error('Failed to connect wallet:', error);
 		}
@@ -57,6 +53,7 @@ function Header({}: Props) {
 		await web3Modal.clearCachedProvider();
 		setProvider(undefined);
 		setWebAddress(undefined);
+		setAllowed(false);
 	}, []);
 
 	useEffect(() => {
@@ -297,7 +294,10 @@ function Header({}: Props) {
 								onClick={() => showPunksMenu()}
 							>
 								Buy a Punk
-								<i className='fa-solid fa-caret-down ml-1'></i>
+								<FontAwesomeIcon
+									className='ml-1'
+									icon={faCaretDown}
+								/>
 							</button>
 							{showMenu && (
 								<ul
@@ -336,7 +336,10 @@ function Header({}: Props) {
 								onClick={() => showGamesMenu()}
 							>
 								Games
-								<i className='fa-solid fa-caret-down ml-1'></i>
+								<FontAwesomeIcon
+									className='ml-1'
+									icon={faCaretDown}
+								/>
 							</button>
 							{showAppList && (
 								<ul
