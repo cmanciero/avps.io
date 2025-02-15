@@ -28,6 +28,7 @@ function Header({}: Props) {
 	const [btnText, setBtnText] = useState('Connect');
 	const [webAddress, setWebAddress] = useState<string>();
 	const [showAppList, setShowAppList] = useState(false);
+	const [isHomePage, setIsHomePage] = useState(true);
 	const [provider, setProvider] = useState<BrowserProvider>();
 
 	let closeTimer: NodeJS.Timeout;
@@ -56,21 +57,6 @@ function Header({}: Props) {
 		setAllowed(false);
 	}, []);
 
-	useEffect(() => {
-		if (web3Modal.cachedProvider) {
-			connectWallet();
-		}
-	}, [connectWallet]);
-
-	useEffect(() => {
-		if (webAddress) {
-			const address = webAddress.slice(0, 5) + '...' + webAddress.substring(webAddress.length - 4, webAddress.length);
-			setBtnText(address);
-		} else {
-			setBtnText('Connect');
-		}
-	}, [webAddress]);
-
 	const showPunksMenu = () => {
 		if (showMenu) {
 			setShowMenu(false);
@@ -86,6 +72,21 @@ function Header({}: Props) {
 			setShowAppList(true);
 		}
 	};
+
+	useEffect(() => {
+		if (web3Modal.cachedProvider) {
+			connectWallet();
+		}
+	}, [connectWallet]);
+
+	useEffect(() => {
+		if (webAddress) {
+			const address = webAddress.slice(0, 5) + '...' + webAddress.substring(webAddress.length - 4, webAddress.length);
+			setBtnText(address);
+		} else {
+			setBtnText('Connect');
+		}
+	}, [webAddress]);
 
 	useEffect(() => {
 		// if (!this.web3Account && !this.metamaskAddress) return 'Connect';
@@ -152,7 +153,9 @@ function Header({}: Props) {
 	return (
 		<header
 			className={
-				'fixed top-0 w-full z-50 ' + (openNav ? 'bg-gradient-to-tr from-color-1 to-color-2' : '') + (stickyHeader ? 'lockedHeader' : '')
+				'fixed top-0 w-full z-50 ' +
+				(openNav || !isHomePage ? 'bg-gradient-to-tr from-color-1 to-color-2 ' : '') +
+				(stickyHeader ? 'lockedHeader' : '')
 			}
 		>
 			<div

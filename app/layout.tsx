@@ -6,6 +6,9 @@ import { Poppins } from 'next/font/google';
 
 import { config } from '@fortawesome/fontawesome-svg-core';
 
+import Footer from './components/footer/Footer';
+import Header from './components/header/Header';
+
 config.autoAddCss = false;
 
 const poppins = Poppins({
@@ -27,7 +30,11 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang='en'>
-			<body className={`${poppins.variable} antialiased`}>{children}</body>
+			<body className={`${poppins.variable} antialiased`}>
+				<Header />
+				{children}
+				<Footer />
+			</body>
 		</html>
 	);
 }
