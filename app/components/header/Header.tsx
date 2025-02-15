@@ -3,6 +3,7 @@
 import { BrowserProvider, ethers } from 'ethers';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 import Web3Modal from 'web3modal';
 
@@ -21,6 +22,8 @@ type Props = {};
 
 function Header({}: Props) {
 	const allowedAdmins = ['0xDB1Ac1d3CaCF1bB80e3597bb0EE3CAF52D266dFa'];
+	const pathname = usePathname();
+
 	const [openNav, setOpenNav] = useState(false);
 	const [stickyHeader, setStickyHeader] = useState(false);
 	const [allowed, setAllowed] = useState(false);
@@ -149,6 +152,17 @@ function Header({}: Props) {
 			window.removeEventListener('click', closeGameMenu);
 		};
 	}, [showAppList]);
+
+	useEffect(() => {
+		const url = pathname;
+		// Perform actions based on the new URL
+		if (url === '/') {
+			// Do something specific for the Home page
+			setIsHomePage(true);
+		} else {
+			setIsHomePage(false);
+		}
+	}, [pathname]);
 
 	return (
 		<header
@@ -283,7 +297,7 @@ function Header({}: Props) {
 							$PZA MARKET
 						</Link>
 						<Link
-							href='#team'
+							href='/#team'
 							className='cursor-pointer text-white hover:text-white font-semibold mx-4'
 						>
 							TEAM
@@ -371,7 +385,7 @@ function Header({}: Props) {
 					<div className='justify-self-end flex flex-row-reverse items-center'>
 						{!webAddress && (
 							<Link
-								href='#'
+								href='/'
 								onClick={connectWallet}
 								className='px-3 py-1 rounded flex items-center justify-center cursor-pointer text-white connect font-semibold uppercase'
 							>
