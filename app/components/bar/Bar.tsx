@@ -1,7 +1,9 @@
 'use client';
 
-import Image, { StaticImageData } from 'next/image';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
+
+import { IPartner } from '@/app/util/interfaces';
 
 import Alpha from '../../assets/images/alpha_pfp.png';
 import AVP5_GIF from '../../assets/images/AVP5.gif';
@@ -12,15 +14,6 @@ import Mngo from '../../assets/images/mngo_pfp.png';
 import Super from '../../assets/images/supermanciero_pfp.png';
 import LinkedIn from '../linkedIn/LinkedIn';
 import Twitter from '../twitter/Twitter';
-
-export interface IPartner {
-	id: string;
-	profile: StaticImageData;
-	name: string;
-	summary: string;
-	twitter?: string;
-	linkedIn?: string;
-}
 
 type Props = {};
 

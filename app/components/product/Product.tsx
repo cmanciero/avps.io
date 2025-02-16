@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { IProduct } from '@/app/oven/page';
+import { IProduct } from '@/app/util/interfaces';
 
 import Discord from '../discord/Discord';
 import Instagram from '../instagram/Instagram';

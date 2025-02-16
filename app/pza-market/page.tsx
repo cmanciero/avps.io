@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import Cart from '../components/cart/Cart';
 import Product from '../components/product/Product';
-import { IProduct } from '../oven/page';
+import { IProduct } from '../util/interfaces';
 
 type Props = {};
 

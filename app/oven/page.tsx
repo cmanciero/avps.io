@@ -1,24 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-export interface IProductLinks {
-	twitter: string;
-	discord: string;
-	website: string;
-	instagram: string;
-}
-export interface IProduct {
-	id?: string;
-	name: string;
-	description: string;
-	links: IProductLinks;
-	price: number;
-	total_supply: number;
-	quantity: number;
-	unique_buy: boolean;
-	sold: boolean;
-	img: string;
-}
+import { IProduct } from '../util/interfaces';
 
 export default function Blockchain() {
 	const newProduct: IProduct = {

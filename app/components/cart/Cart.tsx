@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-import { IProduct } from '@/app/oven/page';
+import { IProduct } from '@/app/util/interfaces';
 
 type Props = {
 	toggle: () => void;
