@@ -1,8 +1,10 @@
 'use client';
-import { useState } from 'react';
+import axios from 'axios';
+import { useEffect, useState } from 'react';
 
 import Cart from '../components/cart/Cart';
-import Product, { IProduct } from '../components/product/Product';
+import Product from '../components/product/Product';
+import { IProduct } from '../oven/page';
 
 type Props = {};
 
@@ -21,6 +23,7 @@ function page({}: Props) {
 	const [cart, setCart] = useState<IProduct[]>([]);
 	const [productsBought, setProductsBought] = useState<IProduct[]>([]);
 	const [displayProducts, setDisplayProducts] = useState<IProduct[]>([]);
+	const [showErrorMessage, setShowErrorMessage] = useState<string>();
 
 	const transferModal = () => {};
 	const addTokenToWallet = () => {};
@@ -51,6 +54,20 @@ function page({}: Props) {
 	const addToCart = (product: IProduct) => {
 		console.log(product);
 	};
+
+	const getProducts = async () => {
+		try {
+			const res = await axios.get(`${SHOP_URL}/products`);
+			setDisplayProducts(res.data.products);
+			console.log(res.data.products);
+		} catch (error) {
+			setShowErrorMessage('Failed to get products');
+		}
+	};
+
+	useEffect(() => {
+		getProducts();
+	}, []);
 
 	return (
 		<section className='bg-gray-100 pb-8 pt-36'>
@@ -195,10 +212,7 @@ function page({}: Props) {
 						cart={cart}
 					/>
 				)}
-				<div
-					v-else
-					className='mt-12 grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-				>
+				<div className='mt-12 grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
 					{displayProducts.map((product: IProduct) => (
 						<Product
 							key={product.id}
