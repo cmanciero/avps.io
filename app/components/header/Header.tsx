@@ -169,7 +169,7 @@ function Header({}: Props) {
 			className={
 				'fixed top-0 w-full z-50 ' +
 				(openNav || !isHomePage ? 'bg-gradient-to-tr from-color-1 to-color-2 ' : '') +
-				(stickyHeader ? 'lockedHeader' : '')
+				(stickyHeader && isHomePage ? 'lockedHeader' : '')
 			}
 		>
 			<div
