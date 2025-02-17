@@ -8,6 +8,7 @@ import { config } from '@fortawesome/fontawesome-svg-core';
 
 import Footer from './components/footer/Footer';
 import Header from './components/header/Header';
+import { AVPContextProvider } from './context/AVPContextProvider';
 
 config.autoAddCss = false;
 
@@ -31,9 +32,11 @@ export default function RootLayout({
 	return (
 		<html lang='en'>
 			<body className={`${poppins.variable} antialiased`}>
-				<Header />
-				{children}
-				<Footer />
+				<AVPContextProvider>
+					<Header />
+					{children}
+					<Footer />
+				</AVPContextProvider>
 			</body>
 		</html>
 	);

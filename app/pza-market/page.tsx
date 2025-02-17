@@ -1,9 +1,14 @@
 'use client';
 import axios from 'axios';
+import { Contract } from 'ethers';
 import { useEffect, useState } from 'react';
+import Web3 from 'web3';
 
 import Cart from '../components/cart/Cart';
 import Product from '../components/product/Product';
+import { useAvpContext } from '../context/AVPContextProvider';
+import { ABI, ADDRESS } from '../util/constants/contract.js';
+import { ABI as ABI_MVP, ADDRESS as ADDRESS_MVP } from '../util/constants/mvp/contract.js';
 import { IProduct } from '../util/interfaces';
 
 type Props = {};
@@ -13,17 +18,24 @@ const SHOP_URL = 'https://averagepunks.app';
 function page({}: Props) {
 	const MVP_MULTIPLIER = 300;
 	const AVP_MULTIPLIER = 50;
+	const { walletAddress, provider } = useAvpContext();
+
 	const [mvpCount, setMvpCount] = useState(0);
 	const [avpCount, setAvpCount] = useState(0);
 	const [balance, setBalance] = useState(0);
 	const [pizzaBalance, setPizzaBalance] = useState(0);
-	const [metamaskAddress, setMetamaskAddress] = useState<string>('');
+
 	const [myItems, setMyItems] = useState();
 	const [showCart, setShowCart] = useState(false);
 	const [cart, setCart] = useState<IProduct[]>([]);
 	const [productsBought, setProductsBought] = useState<IProduct[]>([]);
 	const [displayProducts, setDisplayProducts] = useState<IProduct[]>([]);
 	const [showErrorMessage, setShowErrorMessage] = useState<string>();
+	const [amount, setAmount] = useState(0);
+	const [message, setMessage] = useState('');
+
+	const [mvpContract, setMvpContract] = useState<Contract>();
+	const [avpContract, setAvpContract] = useState<Contract>();
 
 	const transferModal = () => {};
 	const addTokenToWallet = () => {};
@@ -37,16 +49,17 @@ function page({}: Props) {
 	const removeItemFromCart = () => {};
 	const finalizeOrder = () => {};
 	const emptyCart = () => {};
+	let tmpBalance = 0;
 
 	const canRate = () => {
-		if (metamaskAddress && pizzaBalance) {
+		if (walletAddress && pizzaBalance) {
 			return true;
 		}
 		return false;
 	};
 
 	const canBuy = (price: number) => {
-		if (metamaskAddress) return false;
+		if (walletAddress) return false;
 		if (pizzaBalance >= price) return true;
 		else return false;
 	};
@@ -65,9 +78,72 @@ function page({}: Props) {
 		}
 	};
 
+	const getPunksCount = async () => {
+		setMvpCount(await mvpContract?.methods.balanceOf(walletAddress).call());
+		setAvpCount(await avpContract?.methods.balanceOf(walletAddress).call());
+	};
+
+	const getPizzaBalance = async () => {
+		const res = await axios.get(`${SHOP_URL}/pizzas`, {
+			params: {
+				wallet: walletAddress,
+			},
+		});
+		setPizzaBalance(res.data.balance);
+		tmpBalance = pizzaBalance;
+		setAmount(pizzaBalance);
+	};
+
+	const claimTokens = async () => {
+		// const web3 = this.web3Shop;
+		const oneDayMs = 86400000;
+		let last_claim = localStorage.getItem('last_punked' + walletAddress);
+		if (last_claim && last_claim > Date.now() - oneDayMs) {
+			console.log('claimed less than 24h ago');
+			return;
+		}
+
+		try {
+			const msg = 'Starting a session with this address ' + walletAddress;
+			setMessage(msg);
+			const web3Instance = new Web3(provider);
+
+			const sig = await web3Instance.eth.personal.sign(message, walletAddress);
+
+			await axios.post(`${SHOP_URL}/pizzas`, {
+				signature: sig,
+				wallet: walletAddress,
+				message: msg,
+			});
+			localStorage.setItem('last_punked' + walletAddress, Date.now());
+			getPizzaBalance();
+		} catch (error) {
+			setShowErrorMessage('Failure to claim tokens');
+		}
+	};
+
 	useEffect(() => {
-		getProducts();
-	}, []);
+		if (walletAddress && provider) {
+			console.log(walletAddress);
+
+			const web3Instance = new Web3(provider);
+
+			const MVP_CONTRACT = new web3Instance.eth.Contract(ABI_MVP, ADDRESS_MVP);
+			setMvpContract(MVP_CONTRACT);
+			const AVP_CONTRACT = new web3Instance.eth.Contract(ABI, ADDRESS);
+			setAvpContract(AVP_CONTRACT);
+
+			getProducts();
+			getPizzaBalance();
+			claimTokens();
+		}
+	}, [walletAddress, provider]);
+
+	useEffect(() => {
+		if (avpContract && mvpContract) {
+			getPunksCount();
+		}
+	}, [avpContract, mvpContract]);
 
 	return (
 		<section className='bg-gray-100 pb-8 pt-36'>
@@ -103,10 +179,10 @@ function page({}: Props) {
 						<div className='flex justify-between mt-3 w-full'>
 							<button
 								onClick={transferModal}
-								disabled={!metamaskAddress || (metamaskAddress && pizzaBalance === 0)}
+								disabled={!walletAddress || (walletAddress && pizzaBalance === 0)}
 								className={
 									'border border-purple-300 bg-white px-4 py-2 text-purple-600 uppercase font-semibold rounded mr-2 ' +
-									(metamaskAddress && pizzaBalance > 0 ? 'hover:bg-purple-600 hover:text-white cursor-pointer' : 'cursor-default')
+									(walletAddress && pizzaBalance > 0 ? 'hover:bg-purple-600 hover:text-white cursor-pointer' : 'cursor-default')
 								}
 							>
 								Transfer
@@ -116,7 +192,7 @@ function page({}: Props) {
 					<div className='shadow-xl bg-white p-4 rounded-lg flex-col items-center justify-center'>
 						<div className='flex justify-between items-center'>
 							<p className='text-xs md:text-sm uppercase text-purple-600 px-2 py-1 bg-white -mx-4 rounded-t'>ONCHAIN</p>
-							{metamaskAddress && (
+							{walletAddress && (
 								<button
 									className='text-xs text-purple-600 underline uppercase'
 									onClick={addTokenToWallet}
@@ -128,21 +204,21 @@ function page({}: Props) {
 
 						<div className='flex justify-between mt-3 w-full'>
 							<button
-								disabled={!metamaskAddress}
+								disabled={!walletAddress}
 								onClick={() => openWithdrawModal('deposit')}
 								className={
 									'border border-purple-300 bg-white px-4 py-2 text-purple-600 uppercase font-semibold rounded ' +
-									(metamaskAddress && pizzaBalance > 0 ? 'hover:bg-purple-600 hover:text-white cursor-pointer' : 'cursor-default')
+									(walletAddress && pizzaBalance > 0 ? 'hover:bg-purple-600 hover:text-white cursor-pointer' : 'cursor-default')
 								}
 							>
 								Deposit
 							</button>
 							<button
-								disabled={!metamaskAddress}
+								disabled={!walletAddress}
 								onClick={() => openWithdrawModal('withdraw')}
 								className={
 									'border border-purple-300 bg-white px-4 py-2 text-purple-600 uppercase font-semibold rounded ' +
-									(metamaskAddress && pizzaBalance > 0 ? 'hover:bg-purple-600 hover:text-white cursor-pointer' : 'cursor-default')
+									(walletAddress && pizzaBalance > 0 ? 'hover:bg-purple-600 hover:text-white cursor-pointer' : 'cursor-default')
 								}
 							>
 								Withdraw
@@ -153,21 +229,21 @@ function page({}: Props) {
 				<div className='flex items-center justify-between h-16 w-full rounded mt-12'>
 					<div className='flex items-center justify-center'>
 						<button
-							disabled={!metamaskAddress}
+							disabled={!walletAddress}
 							onClick={() => getMyItems()}
 							className={
 								'text-xs md:text-base border bg-white border-purple-300 px-4 py-2 text-purple-600 uppercase font-semibold rounded mr-2 ' +
-								(metamaskAddress ? 'hover:bg-purple-600 hover:text-white cursor-pointer' : 'cursor-default')
+								(walletAddress ? 'hover:bg-purple-600 hover:text-white cursor-pointer' : 'cursor-default')
 							}
 						>
 							{!myItems ? 'My items' : 'Back to shop'}
 						</button>
 						{!showCart && (
 							<button
-								disabled={!metamaskAddress}
+								disabled={!walletAddress}
 								className={
 									'text-xs md:text-base border bg-white px-4 border-purple-300 py-2 text-purple-600 uppercase font-semibold rounded ' +
-									(metamaskAddress ? 'hover:bg-purple-600 hover:text-white cursor-pointer' : 'cursor-default')
+									(walletAddress ? 'hover:bg-purple-600 hover:text-white cursor-pointer' : 'cursor-default')
 								}
 								onClick={toggleCart}
 							>
@@ -208,7 +284,7 @@ function page({}: Props) {
 						removeItem={removeItemFromCart}
 						finalizeOrder={finalizeOrder}
 						emptyCart={emptyCart}
-						wallet={metamaskAddress}
+						wallet={walletAddress}
 						cart={cart}
 					/>
 				)}

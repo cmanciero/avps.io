@@ -1,12 +1,13 @@
 'use client';
 
-import { BrowserProvider, ethers } from 'ethers';
+import { ethers } from 'ethers';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 import Web3Modal from 'web3modal';
 
+import { useAvpContext } from '@/app/context/AVPContextProvider';
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
@@ -23,16 +24,15 @@ type Props = {};
 function Header({}: Props) {
 	const allowedAdmins = ['0xDB1Ac1d3CaCF1bB80e3597bb0EE3CAF52D266dFa'];
 	const pathname = usePathname();
+	const { walletAddress, updateWalletAddress, updateProvider } = useAvpContext();
 
 	const [openNav, setOpenNav] = useState(false);
 	const [stickyHeader, setStickyHeader] = useState(false);
 	const [allowed, setAllowed] = useState(false);
 	const [showMenu, setShowMenu] = useState(false);
 	const [btnText, setBtnText] = useState('Connect');
-	const [webAddress, setWebAddress] = useState<string>();
 	const [showAppList, setShowAppList] = useState(false);
 	const [isHomePage, setIsHomePage] = useState(true);
-	const [provider, setProvider] = useState<BrowserProvider>();
 
 	let closeTimer: NodeJS.Timeout;
 	let closeGameTimer: NodeJS.Timeout;
@@ -42,11 +42,12 @@ function Header({}: Props) {
 			const externalProvider = await web3Modal.connect();
 			const ethersProvider = new ethers.BrowserProvider(externalProvider);
 			const signer = await ethersProvider.getSigner();
-			const walletAddress = await signer.getAddress();
+			const wallet = await signer.getAddress();
 
-			setProvider(ethersProvider);
-			setWebAddress(walletAddress);
-			const walletAllowed = allowedAdmins.includes(walletAddress);
+			updateWalletAddress(wallet);
+			updateProvider(ethersProvider);
+
+			const walletAllowed = allowedAdmins.includes(wallet);
 			setAllowed(walletAllowed);
 		} catch (error) {
 			console.error('Failed to connect wallet:', error);
@@ -55,8 +56,9 @@ function Header({}: Props) {
 
 	const disconnectWallet = useCallback(async () => {
 		await web3Modal.clearCachedProvider();
-		setProvider(undefined);
-		setWebAddress(undefined);
+
+		updateProvider(null);
+		updateWalletAddress(null);
 		setAllowed(false);
 	}, []);
 
@@ -83,13 +85,13 @@ function Header({}: Props) {
 	}, [connectWallet]);
 
 	useEffect(() => {
-		if (webAddress) {
-			const address = webAddress.slice(0, 5) + '...' + webAddress.substring(webAddress.length - 4, webAddress.length);
+		if (walletAddress) {
+			const address = walletAddress.slice(0, 5) + '...' + walletAddress.substring(walletAddress.length - 4, walletAddress.length);
 			setBtnText(address);
 		} else {
 			setBtnText('Connect');
 		}
-	}, [webAddress]);
+	}, [walletAddress]);
 
 	useEffect(() => {
 		// if (!this.web3Account && !this.metamaskAddress) return 'Connect';
@@ -261,7 +263,7 @@ function Header({}: Props) {
 					>
 						PZA Dash
 					</Link>
-					{!webAddress && (
+					{!walletAddress && (
 						<Link
 							href='#'
 							onClick={connectWallet}
@@ -270,7 +272,7 @@ function Header({}: Props) {
 							{btnText}
 						</Link>
 					)}
-					{webAddress && (
+					{walletAddress && (
 						<Link
 							href='#'
 							onClick={disconnectWallet}
@@ -383,16 +385,16 @@ function Header({}: Props) {
 						</Link>
 					</div>
 					<div className='justify-self-end flex flex-row-reverse items-center'>
-						{!webAddress && (
+						{!walletAddress && (
 							<Link
-								href='/'
+								href='#'
 								onClick={connectWallet}
 								className='px-3 py-1 rounded flex items-center justify-center cursor-pointer text-white connect font-semibold uppercase'
 							>
 								{btnText}
 							</Link>
 						)}
-						{webAddress && (
+						{walletAddress && (
 							<Link
 								href='#'
 								onClick={disconnectWallet}
