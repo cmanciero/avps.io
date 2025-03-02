@@ -1,23 +1,23 @@
 'use client';
-import { BrowserProvider } from 'ethers';
 import { createContext, useContext, useState } from 'react';
+import Providers from 'web3';
 
 export const AVPContext = createContext({
 	walletAddress: '',
 	provider: null,
 	updateWalletAddress: (newWalletAddress: string | null) => {},
-	updateProvider: (newProvider: BrowserProvider | null) => {},
+	updateProvider: (newProvider: Providers | null) => {},
 });
 
 export const AVPContextProvider = ({ children }) => {
 	const [walletAddress, setWalletAddress] = useState<string | null>('');
-	const [provider, setProvider] = useState<BrowserProvider | null>();
+	const [provider, setProvider] = useState<Providers | null>();
 
 	const updateWalletAddress = (newWalletAddress: string) => {
 		setWalletAddress(newWalletAddress);
 	};
 
-	const updateProvider = (newProvider: BrowserProvider) => {
+	const updateProvider = (newProvider: Providers) => {
 		setProvider(newProvider);
 	};
 

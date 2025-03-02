@@ -1,10 +1,10 @@
 'use client';
 
-import { ethers } from 'ethers';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
+import Web3 from 'web3';
 import Web3Modal from 'web3modal';
 
 import { useAvpContext } from '@/app/context/AVPContextProvider';
@@ -39,15 +39,15 @@ function Header({}: Props) {
 
 	const connectWallet = useCallback(async () => {
 		try {
-			const externalProvider = await web3Modal.connect();
-			const ethersProvider = new ethers.BrowserProvider(externalProvider);
-			const signer = await ethersProvider.getSigner();
-			const wallet = await signer.getAddress();
+			const provider = await web3Modal.connect();
 
-			updateWalletAddress(wallet);
-			updateProvider(ethersProvider);
+			const newWeb3 = new Web3(provider);
+			const wallet = await newWeb3.eth.getAccounts();
 
-			const walletAllowed = allowedAdmins.includes(wallet);
+			updateWalletAddress(wallet[0]);
+			updateProvider(provider);
+
+			const walletAllowed = allowedAdmins.includes(wallet[0]);
 			setAllowed(walletAllowed);
 		} catch (error) {
 			console.error('Failed to connect wallet:', error);

@@ -1,14 +1,14 @@
 'use client';
 import axios from 'axios';
-import { Contract } from 'ethers';
 import { useEffect, useState } from 'react';
 import Web3 from 'web3';
+import { Contract } from 'web3-eth-contract';
 
 import Cart from '../components/cart/Cart';
 import Product from '../components/product/Product';
 import { useAvpContext } from '../context/AVPContextProvider';
-import { ABI, ADDRESS } from '../util/constants/contract.js';
-import { ABI as ABI_MVP, ADDRESS as ADDRESS_MVP } from '../util/constants/mvp/contract.js';
+import { ABI as ABI_MVP, ADDRESS as ADDRESS_MVP } from '../util/constants/mvp/contract';
+import { ABI, ADDRESS } from '../util/constants/pizza/contract';
 import { IProduct } from '../util/interfaces';
 
 type Props = {};
@@ -22,7 +22,6 @@ function page({}: Props) {
 
 	const [mvpCount, setMvpCount] = useState(0);
 	const [avpCount, setAvpCount] = useState(0);
-	const [balance, setBalance] = useState(0);
 	const [pizzaBalance, setPizzaBalance] = useState(0);
 
 	const [myItems, setMyItems] = useState();
@@ -72,15 +71,19 @@ function page({}: Props) {
 		try {
 			const res = await axios.get(`${SHOP_URL}/products`);
 			setDisplayProducts(res.data.products);
-			console.log(res.data.products);
 		} catch (error) {
 			setShowErrorMessage('Failed to get products');
 		}
 	};
 
 	const getPunksCount = async () => {
-		setMvpCount(await mvpContract?.methods.balanceOf(walletAddress).call());
-		setAvpCount(await avpContract?.methods.balanceOf(walletAddress).call());
+		const mvp = await mvpContract?.methods.balanceOf(walletAddress).call();
+		setMvpCount(mvp);
+
+		await avpContract?.methods
+			.balanceOf(walletAddress)
+			.call()
+			.then((avp: number) => setAvpCount(avp));
 	};
 
 	const getPizzaBalance = async () => {
@@ -108,7 +111,7 @@ function page({}: Props) {
 			setMessage(msg);
 			const web3Instance = new Web3(provider);
 
-			const sig = await web3Instance.eth.personal.sign(message, walletAddress);
+			const sig = await web3Instance.eth.personal.sign(msg, walletAddress);
 
 			await axios.post(`${SHOP_URL}/pizzas`, {
 				signature: sig,
@@ -124,12 +127,11 @@ function page({}: Props) {
 
 	useEffect(() => {
 		if (walletAddress && provider) {
-			console.log(walletAddress);
-
 			const web3Instance = new Web3(provider);
 
 			const MVP_CONTRACT = new web3Instance.eth.Contract(ABI_MVP, ADDRESS_MVP);
 			setMvpContract(MVP_CONTRACT);
+
 			const AVP_CONTRACT = new web3Instance.eth.Contract(ABI, ADDRESS);
 			setAvpContract(AVP_CONTRACT);
 
@@ -171,7 +173,7 @@ function page({}: Props) {
 					<div className='shadow-xl bg-white p-4 rounded-lg flex-col items-center justify-center'>
 						<p className='text-xs md:text-sm uppercase text-purple-600 px-2 py-1 bg-white -mx-4 rounded-t'>My $PZA balance</p>
 						<div className='flex items-center justify-between mt-2'>
-							<p className='text-xl md:text-3xl lg:text-5xl font-semibold text-purple-600'>{balance}</p>
+							<p className='text-xl md:text-3xl lg:text-5xl font-semibold text-purple-600'>{pizzaBalance}</p>
 						</div>
 					</div>
 					<div className='shadow-xl bg-white p-4 rounded-lg flex-col items-center justify-center'>
