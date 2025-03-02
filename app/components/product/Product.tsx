@@ -12,11 +12,12 @@ type Props = {
 	canBuy: boolean;
 	hideButton?: boolean;
 	product: IProduct;
-	buy?: (product: IProduct) => void;
+	buy: (product: IProduct) => void;
 };
 
 function Product({ product, canBuy, buy }: Props) {
 	const [hideButton, setHideButton] = useState(false);
+
 	return (
 		<div className={'rounded-lg shadow hover:shadow-lg bg-white ' + (product.sold ? 'opacity-50' : '')}>
 			<div className='relative'>

@@ -1,6 +1,7 @@
 'use client';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
+import { Bounce, toast, ToastContainer } from 'react-toastify';
 import Web3 from 'web3';
 import { Contract } from 'web3-eth-contract';
 
@@ -13,6 +14,11 @@ import { IProduct } from '../util/interfaces';
 
 type Props = {};
 
+enum ToastTypes {
+	SUCCESS = 'success',
+	ERROR = 'error',
+}
+
 const SHOP_URL = 'https://averagepunks.app';
 
 function page({}: Props) {
@@ -23,15 +29,17 @@ function page({}: Props) {
 	const [mvpCount, setMvpCount] = useState(0);
 	const [avpCount, setAvpCount] = useState(0);
 	const [pizzaBalance, setPizzaBalance] = useState(0);
+	const [tmpBalance, setTmpBalance] = useState(0);
 
-	const [myItems, setMyItems] = useState();
+	const [myItems, setMyItems] = useState(false);
 	const [showCart, setShowCart] = useState(false);
 	const [cart, setCart] = useState<IProduct[]>([]);
 	const [productsBought, setProductsBought] = useState<IProduct[]>([]);
 	const [displayProducts, setDisplayProducts] = useState<IProduct[]>([]);
-	const [showErrorMessage, setShowErrorMessage] = useState<string>();
+	const [withdrawAllowed, setWithdrawAllowed] = useState(false);
 	const [amount, setAmount] = useState(0);
 	const [message, setMessage] = useState('');
+	const [blockHeight, setBlockHeight] = useState(0);
 
 	const [mvpContract, setMvpContract] = useState<Contract>();
 	const [avpContract, setAvpContract] = useState<Contract>();
@@ -40,15 +48,17 @@ function page({}: Props) {
 	const addTokenToWallet = () => {};
 	const openWithdrawModal = (action: string) => {};
 	const getMyItems = () => {
-		// !myItems ? getProductsBought() : '';
-		// 						myItems = !myItems;
-		// 						showCart = false;
+		getProductsBought();
+		setShowCart(false);
+		setMyItems(!myItems);
 	};
-	const toggleCart = () => {};
+	const toggleCart = () => {
+		setMyItems(false);
+		setShowCart(!showCart);
+	};
 	const removeItemFromCart = () => {};
 	const finalizeOrder = () => {};
 	const emptyCart = () => {};
-	let tmpBalance = 0;
 
 	const canRate = () => {
 		if (walletAddress && pizzaBalance) {
@@ -58,13 +68,84 @@ function page({}: Props) {
 	};
 
 	const canBuy = (price: number) => {
-		if (walletAddress) return false;
-		if (pizzaBalance >= price) return true;
-		else return false;
+		if (walletAddress) return true;
+		if (pizzaBalance >= price) return false;
+		else return true;
+	};
+
+	const getProductsBought = async () => {
+		try {
+			const res = await axios.get(`${SHOP_URL}/ownerOf`, {
+				params: {
+					wallet: walletAddress,
+				},
+			});
+			setProductsBought(res.data.products);
+		} catch (error) {
+			showToast(error.message, ToastTypes.ERROR);
+		}
+	};
+
+	const canWithdraw = async () => {
+		try {
+			const res = await axios.get(`${SHOP_URL}/canWithdraw`, {
+				params: { wallet: walletAddress },
+			});
+
+			setWithdrawAllowed(res.data.allowed);
+			if (!withdrawAllowed) {
+				setBlockHeight(res.data.until);
+				showToast(res.data.message, ToastTypes.ERROR);
+			}
+		} catch (error) {
+			console.log('ICI?');
+			console.log(error);
+			showToast(error.message, ToastTypes.ERROR);
+		}
 	};
 
 	const addToCart = (product: IProduct) => {
-		console.log(product);
+		if (product.unique_buy) {
+			const found = cart.find((p) => p.id === product.id);
+			if (found !== undefined) return showToast('This item is already in your cart', ToastTypes.ERROR);
+		}
+		if (product.quantity < 1) {
+			return showToast('Not available', ToastTypes.ERROR);
+		}
+		if (tmpBalance < product.price) return showToast('You need more $PZA', ToastTypes.ERROR);
+
+		setTmpBalance(tmpBalance - product.price);
+		cart.push(product);
+
+		showToast('Item added to cart', ToastTypes.SUCCESS);
+	};
+
+	const showToast = (message: string, type: ToastTypes) => {
+		if (type === ToastTypes.SUCCESS) {
+			toast.success(message, {
+				position: 'bottom-right',
+				autoClose: 3000,
+				hideProgressBar: false,
+				closeOnClick: false,
+				pauseOnHover: true,
+				draggable: true,
+				progress: undefined,
+				theme: 'colored',
+				transition: Bounce,
+			});
+		} else if (type === ToastTypes.ERROR) {
+			toast.error(message, {
+				position: 'bottom-right',
+				autoClose: 3000,
+				hideProgressBar: false,
+				closeOnClick: false,
+				pauseOnHover: true,
+				draggable: true,
+				progress: undefined,
+				theme: 'colored',
+				transition: Bounce,
+			});
+		}
 	};
 
 	const getProducts = async () => {
@@ -72,7 +153,7 @@ function page({}: Props) {
 			const res = await axios.get(`${SHOP_URL}/products`);
 			setDisplayProducts(res.data.products);
 		} catch (error) {
-			setShowErrorMessage('Failed to get products');
+			showToast('Failed to get products', ToastTypes.ERROR);
 		}
 	};
 
@@ -92,9 +173,10 @@ function page({}: Props) {
 				wallet: walletAddress,
 			},
 		});
-		setPizzaBalance(res.data.balance);
-		tmpBalance = pizzaBalance;
-		setAmount(pizzaBalance);
+		const balance = parseInt(res.data.balance);
+		setPizzaBalance(balance);
+		setTmpBalance(balance);
+		setAmount(balance);
 	};
 
 	const claimTokens = async () => {
@@ -121,7 +203,46 @@ function page({}: Props) {
 			localStorage.setItem('last_punked' + walletAddress, Date.now());
 			getPizzaBalance();
 		} catch (error) {
-			setShowErrorMessage('Failure to claim tokens');
+			showToast('Failure to claim tokens', ToastTypes.ERROR);
+		}
+	};
+
+	const buyProduct = async (product: IProduct) => {
+		const web3 = new Web3(provider);
+		if (!withdrawAllowed) {
+			const currentBlock = await web3.eth.getBlockNumber();
+			showToast(`The marketplace is frozen for ${20 - Math.abs(blockHeight - currentBlock)} blocks`, ToastTypes.ERROR);
+		}
+
+		let buyer;
+		if (product.wallet.length) {
+			buyer = product.wallet;
+			if (!web3.utils.isAddress(product.wallet)) {
+				return showToast('Invalid address', ToastTypes.ERROR);
+			}
+		} else {
+			buyer = walletAddress;
+		}
+
+		const msg = 'Get this item for no gas, you are only exchanging it for PIZZA tokens and signing with this address ' + walletAddress;
+		try {
+			const sig = await web3.eth.personal.sign(msg, walletAddress);
+			// let wallet =  web3.utils.isAddress(product.wallet) ? product.wallet : this.metamaskAddress;
+			await axios.post(`${SHOP_URL}/buy`, {
+				productId: product.id,
+				signature: sig,
+				wallet: walletAddress,
+				buyer,
+				discord: product.discord,
+				message: msg,
+			});
+			getPizzaBalance();
+			getProducts();
+			// this.getProductsBought();
+
+			showToast('Item purchased', ToastTypes.SUCCESS);
+		} catch (error) {
+			showToast(error.message, ToastTypes.ERROR);
 		}
 	};
 
@@ -138,6 +259,7 @@ function page({}: Props) {
 			getProducts();
 			getPizzaBalance();
 			claimTokens();
+			canWithdraw();
 		}
 	}, [walletAddress, provider]);
 
@@ -276,6 +398,7 @@ function page({}: Props) {
 								canRate={canRate}
 								canBuy={false}
 								hideButton={true}
+								buy={buyProduct}
 							/>
 						))}
 					</div>
@@ -290,18 +413,21 @@ function page({}: Props) {
 						cart={cart}
 					/>
 				)}
-				<div className='mt-12 grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
-					{displayProducts.map((product: IProduct) => (
-						<Product
-							key={product.id}
-							product={product}
-							canRate={canRate}
-							canBuy={canBuy(product.price)}
-							buy={addToCart}
-						/>
-					))}
-				</div>
+				{!myItems && !showCart && (
+					<div className='mt-12 grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
+						{displayProducts.map((product: IProduct) => (
+							<Product
+								key={product.id}
+								product={product}
+								canRate={canRate}
+								canBuy={canBuy(product.price)}
+								buy={addToCart}
+							/>
+						))}
+					</div>
+				)}
 			</div>
+			<ToastContainer />
 		</section>
 	);
 }

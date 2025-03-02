@@ -13,10 +13,12 @@ export interface IProduct {
 	links: IProductLinks;
 	price: number;
 	total_supply: number;
+	discord: string;
 	quantity: number;
 	unique_buy: boolean;
 	sold: boolean;
 	img: string;
+	wallet: string;
 }
 
 export interface IPartner {
