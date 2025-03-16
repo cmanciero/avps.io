@@ -1,32 +1,113 @@
 'use client';
-import { useState } from 'react';
+import axios from 'axios';
+import { ChangeEvent, useEffect, useState } from 'react';
+import { Bounce, toast, ToastContainer } from 'react-toastify';
+import Web3 from 'web3';
 
+import { useAvpContext } from '@/app/context/AVPContextProvider';
+import { SHOP_URL, ToastTypes } from '@/app/pza-market/page';
 import { IProduct } from '@/app/util/interfaces';
 
 type Props = {
 	toggle: () => void;
-	removeItem: () => void;
+	removeItem: (product: IProduct, index: number) => void;
 	finalizeOrder: () => void;
 	emptyCart: () => void;
 	wallet: string;
+	cartTotal: number;
 	cart: IProduct[];
 };
 
-function Cart({ toggle, cart }: Props) {
+function Cart(props: Props) {
+	const { toggle, cart, emptyCart, wallet, removeItem, finalizeOrder, cartTotal } = props;
+	const { walletAddress, provider } = useAvpContext();
+
 	const [discord, setDiscord] = useState('');
 	const [receiver, setReceiver] = useState('');
 	const [agreedDisclaimer, setAgreedDisclaimer] = useState(false);
-	const [cartTotal, setCartTotal] = useState(0);
 
-	const finalizeOrder = () => {};
+	const checkout = async () => {
+		const web3 = new Web3(provider);
+		if (!discord) {
+			showToast('Please fill in your discord', ToastTypes.ERROR);
+		}
+		if (!web3.utils.isAddress(receiver)) {
+			return showToast('Invalid address', ToastTypes.ERROR);
+		}
+		const msg = 'Buy this item for no gas, you are only paying in PIZZA tokens and signing with this address ' + wallet;
+		try {
+			const sig = await web3.eth.personal.sign(msg, wallet);
+			const productIds = cart.map((e) => e.id);
+			console.log({ productIds: productIds });
+			// let wallet =  web3.utils.isAddress(product.wallet) ? product.wallet : this.metamaskAddress;
+			await axios.post(`${SHOP_URL}/buy`, {
+				productIds,
+				buyer: receiver,
+				discord: discord,
+				signature: sig,
+				wallet: wallet,
+				message: msg,
+			});
+
+			// Finalize order to parent
+			finalizeOrder();
+		} catch (error) {
+			showToast(error.message, ToastTypes.ERROR);
+		}
+	};
+
+	const showToast = (message: string, type: ToastTypes) => {
+		if (type === ToastTypes.SUCCESS) {
+			toast.success(message, {
+				position: 'bottom-right',
+				autoClose: 3000,
+				hideProgressBar: false,
+				closeOnClick: false,
+				pauseOnHover: true,
+				draggable: true,
+				progress: undefined,
+				theme: 'colored',
+				transition: Bounce,
+			});
+		} else if (type === ToastTypes.ERROR) {
+			toast.error(message, {
+				position: 'bottom-right',
+				autoClose: 3000,
+				hideProgressBar: false,
+				closeOnClick: false,
+				pauseOnHover: true,
+				draggable: true,
+				progress: undefined,
+				theme: 'colored',
+				transition: Bounce,
+			});
+		}
+	};
+
+	const handleWalletChange = (event: ChangeEvent<HTMLInputElement>) => {
+		setReceiver(event.target.value);
+	};
+
+	const handleDiscordChange = (event: ChangeEvent<HTMLInputElement>) => {
+		setDiscord(event.target.value);
+	};
+
+	const handleDisclaimerChange = (event: ChangeEvent<HTMLInputElement>) => {
+		setAgreedDisclaimer(event.target.checked);
+	};
+
+	useEffect(() => {
+		setReceiver(walletAddress);
+	}, []);
+
 	return (
 		<div className='min-h-screen'>
 			{cart.length === 0 && (
 				<div>
 					<p className='mt-8 text-xl text-purple-600 font-semibold'>You don't have anything in your cart yet.</p>
 					<a
-						onClick={toggle}
 						href='#'
+						onClick={toggle}
 						className='flex font-semibold text-indigo-600 text-sm mt-10'
 					>
 						<svg
@@ -63,9 +144,9 @@ function Cart({ toggle, cart }: Props) {
 								</h3>
 							</div>
 						</div>
-						{cart.map((product) => (
+						{cart.map((product, i) => (
 							<div
-								key={product.id}
+								key={`${product.id}-${i}`}
 								className='flex items-center hover:bg-gray-100 -mx-8 px-6 py-5'
 							>
 								<div className='flex w-2/5'>
@@ -78,8 +159,8 @@ function Cart({ toggle, cart }: Props) {
 									</div>
 									<div className='flex flex-col justify-between ml-4 flex-grow'>
 										<span className='font-bold text-sm text-purple-600'>{product.name}</span>
-										{/* @click.prevent=" $emit('removeItem', { index: i, price: product.price }) */}
 										<a
+											onClick={() => removeItem(product, i)}
 											href='#'
 											className='font-semibold hover:text-red-500 text-gray-500 text-xs'
 										>
@@ -95,6 +176,7 @@ function Cart({ toggle, cart }: Props) {
 						<div className='flex justify-between items-center'>
 							{/* @click.prevent="toggleCart" */}
 							<a
+								onClick={toggle}
 								href='#'
 								className='flex font-semibold text-indigo-600 text-sm mt-10'
 							>
@@ -108,6 +190,7 @@ function Cart({ toggle, cart }: Props) {
 							</a>
 							{/* @click.prevent="$emit('emptyCart');toggleCart();" */}
 							<a
+								onClick={emptyCart}
 								href='#'
 								className='flex font-semibold text-red-600 text-sm mt-10'
 							>
@@ -123,8 +206,7 @@ function Cart({ toggle, cart }: Props) {
 						<h1 className='font-semibold text-2xl border-b pb-8'>Order Summary</h1>
 						<div className='flex justify-between mt-10 mb-5'>
 							<span className='font-semibold text-sm uppercase'>
-								{cart.length}
-								{cart.length === 1 ? 'Item' : 'Items'}
+								{cart.length} {cart.length === 1 ? 'Item' : 'Items'}
 							</span>
 							<span className='font-semibold text-sm'>{cartTotal} $PZA total</span>
 						</div>
@@ -135,11 +217,13 @@ function Cart({ toggle, cart }: Props) {
 								className='font-semibold inline-block mb-3 text-sm uppercase'
 							>
 								Discord ID
-							</label>
+							</label>{' '}
 							{discord}
 							<p className='text-sm mb-3'>This can be used to contact you and it is attached the to presale spot</p>
 							<input
 								type='text'
+								value={discord}
+								onChange={handleDiscordChange}
 								placeholder='Enter your discord id'
 								className='p-2 text-sm text-black w-full rounded focus:outline-none'
 							/>
@@ -148,6 +232,8 @@ function Cart({ toggle, cart }: Props) {
 							<label className='font-semibold inline-block mb-3 text-sm uppercase'>Ethereum wallet</label>
 							<p className='text-sm mb-3'>Default to the connected account if none provided</p>
 							<input
+								value={receiver}
+								onChange={handleWalletChange}
 								type='text'
 								placeholder='Enter your wallet'
 								className='p-2 text-sm text-black w-full rounded focus:outline-none'
@@ -160,15 +246,19 @@ function Cart({ toggle, cart }: Props) {
 							before minting the project, and will not hold the Average Punks or anyone in the community accountable for my decision to
 							redeem the presale spot(s) held in this cart. I further understand there will be no reimbursements of PZA for my purchases.
 						</p>
-						<input type='checkbox' />
+						<input
+							type='checkbox'
+							checked={agreedDisclaimer}
+							onChange={handleDisclaimerChange}
+						/>
 						<div className='border-t mt-8'>
 							<div className='flex font-semibold justify-between py-6 text-sm uppercase'>
 								<span>Total cost</span>
 								<span>{cartTotal} $PZA</span>
 							</div>
 							<button
-								disabled={agreedDisclaimer}
-								onClick={finalizeOrder}
+								disabled={!agreedDisclaimer}
+								onClick={checkout}
 								className={
 									'rounded font-semibold py-3 text-sm text-white uppercase w-full ' +
 									(agreedDisclaimer ? 'bg-green-500 hover:bg-green-600' : 'cursor-default')
@@ -180,6 +270,7 @@ function Cart({ toggle, cart }: Props) {
 					</div>
 				</div>
 			)}
+			<ToastContainer />
 		</div>
 	);
 }

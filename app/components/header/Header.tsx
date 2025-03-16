@@ -373,6 +373,15 @@ function Header({}: Props) {
 											PZA Dash
 										</Link>
 									</li>
+									<li className='uppercase px-3 py-2 cursor-pointer text-purple-700 hover:text-white hover:bg-purple-700 bg-none'>
+										<Link
+											href='https://jsfiddle.net/Sakarrexzor/ysta9dkm/1/#&togetherjs=m34xu5q27a'
+											target='_blank'
+											className='cursor-pointer text-purple-700 hover:text-white font-semibold'
+										>
+											MVP Battle
+										</Link>
+									</li>
 								</ul>
 							)}
 						</div>

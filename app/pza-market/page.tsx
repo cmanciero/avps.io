@@ -5,8 +5,12 @@ import { Bounce, toast, ToastContainer } from 'react-toastify';
 import Web3 from 'web3';
 import { Contract } from 'web3-eth-contract';
 
+import Modal from '@mui/material/Modal';
+
 import Cart from '../components/cart/Cart';
+import DepositModal from '../components/depositModal/DepositModal';
 import Product from '../components/product/Product';
+import TransferModal from '../components/transferModal/TransferModal';
 import { useAvpContext } from '../context/AVPContextProvider';
 import { ABI as ABI_MVP, ADDRESS as ADDRESS_MVP } from '../util/constants/mvp/contract';
 import { ABI, ADDRESS } from '../util/constants/pizza/contract';
@@ -14,12 +18,12 @@ import { IProduct } from '../util/interfaces';
 
 type Props = {};
 
-enum ToastTypes {
+export enum ToastTypes {
 	SUCCESS = 'success',
 	ERROR = 'error',
 }
 
-const SHOP_URL = 'https://averagepunks.app';
+export const SHOP_URL = 'https://averagepunks.app';
 
 function page({}: Props) {
 	const MVP_MULTIPLIER = 300;
@@ -34,31 +38,90 @@ function page({}: Props) {
 	const [myItems, setMyItems] = useState(false);
 	const [showCart, setShowCart] = useState(false);
 	const [cart, setCart] = useState<IProduct[]>([]);
+	const [cartTotal, setCartTotal] = useState<number>(0);
 	const [productsBought, setProductsBought] = useState<IProduct[]>([]);
 	const [displayProducts, setDisplayProducts] = useState<IProduct[]>([]);
 	const [withdrawAllowed, setWithdrawAllowed] = useState(false);
 	const [amount, setAmount] = useState(0);
 	const [message, setMessage] = useState('');
 	const [blockHeight, setBlockHeight] = useState(0);
+	const [showTransferModal, setShowTransferModal] = useState(false);
+	const [showOnChainModal, setShowOnChainModal] = useState(false);
 
 	const [mvpContract, setMvpContract] = useState<Contract>();
 	const [avpContract, setAvpContract] = useState<Contract>();
 
-	const transferModal = () => {};
+	const transferModal = async () => {
+		const web3Instance = new Web3(provider);
+
+		await canWithdraw();
+		if (withdrawAllowed) {
+			setShowTransferModal(true);
+		} else {
+			const currentBlock = await web3Instance.eth.getBlockNumber();
+			showToast(`The marketplace is frozen for ${20 - Math.abs(blockHeight - currentBlock)} blocks`, ToastTypes.ERROR);
+		}
+	};
+
 	const addTokenToWallet = () => {};
-	const openWithdrawModal = (action: string) => {};
+
+	const openWithdrawModal = async (action: string) => {
+		setShowOnChainModal(true);
+		const web3Instance = new Web3(provider);
+
+		await canWithdraw();
+		if (withdrawAllowed) {
+			setShowOnChainModal(true);
+		} else {
+			const currentBlock = await web3Instance.eth.getBlockNumber();
+			return showToast(`The marketplace is frozen for ${20 - Math.abs(blockHeight - currentBlock)} blocks`, ToastTypes.ERROR);
+		}
+	};
+
+	const getCartTotal = () => {
+		const total = cart.reduce((t, e) => t + e.price, 0);
+		setCartTotal(total);
+	};
+
 	const getMyItems = () => {
 		getProductsBought();
 		setShowCart(false);
 		setMyItems(!myItems);
 	};
+
 	const toggleCart = () => {
 		setMyItems(false);
 		setShowCart(!showCart);
 	};
-	const removeItemFromCart = () => {};
-	const finalizeOrder = () => {};
-	const emptyCart = () => {};
+
+	const removeItemFromCart = (product: IProduct, index: number) => {
+		cart.splice(index, 1);
+		const updatedCart = cart;
+		const newTmpBalance = tmpBalance + product.price;
+
+		setTmpBalance(newTmpBalance);
+		setCart(updatedCart);
+
+		getCartTotal();
+
+		if (!updatedCart.length) {
+			toggleCart();
+		}
+	};
+
+	const finalizeOrder = () => {
+		emptyCart();
+		setTmpBalance(0);
+		getPizzaBalance();
+		getProducts();
+		showToast('You bought an item', ToastTypes.SUCCESS);
+	};
+
+	const emptyCart = () => {
+		setCart([]);
+		toggleCart();
+		getCartTotal();
+	};
 
 	const canRate = () => {
 		if (walletAddress && pizzaBalance) {
@@ -116,6 +179,9 @@ function page({}: Props) {
 
 		setTmpBalance(tmpBalance - product.price);
 		cart.push(product);
+		setCart(cart);
+
+		getCartTotal();
 
 		showToast('Item added to cart', ToastTypes.SUCCESS);
 	};
@@ -244,6 +310,16 @@ function page({}: Props) {
 		} catch (error) {
 			showToast(error.message, ToastTypes.ERROR);
 		}
+	};
+
+	const handleModalClose = () => {
+		getPizzaBalance();
+		setShowTransferModal(false);
+	};
+
+	const handleOnChainModalClose = () => {
+		getPizzaBalance();
+		setShowOnChainModal(false);
 	};
 
 	useEffect(() => {
@@ -411,6 +487,7 @@ function page({}: Props) {
 						emptyCart={emptyCart}
 						wallet={walletAddress}
 						cart={cart}
+						cartTotal={cartTotal}
 					/>
 				)}
 				{!myItems && !showCart && (
@@ -428,6 +505,22 @@ function page({}: Props) {
 				)}
 			</div>
 			<ToastContainer />
+			<Modal
+				open={showTransferModal}
+				onClose={handleModalClose}
+				aria-labelledby='modal-modal-title'
+				aria-describedby='modal-modal-description'
+			>
+				<TransferModal gifted={handleModalClose} />
+			</Modal>
+			<Modal
+				open={showOnChainModal}
+				onClose={handleOnChainModalClose}
+				aria-labelledby='modal-modal-title'
+				aria-describedby='modal-modal-description'
+			>
+				<DepositModal gifted={handleOnChainModalClose} />
+			</Modal>
 		</section>
 	);
 }
